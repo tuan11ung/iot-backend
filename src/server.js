@@ -21,7 +21,7 @@ connectDB();
 app.use('/api', apiRoutes);
 
 // Khởi chạy Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 API Server đang chạy tại http://localhost:${PORT}`);
 });
