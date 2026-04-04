@@ -3,6 +3,7 @@ const mqtt = require('mqtt');
 const Device = require('../models/Device.model');
 const DataSensor = require('../models/DataSensor.model');
 const ActionHistory = require('../models/ActionHistory.model');
+const Sensor = require('../models/Sensor.model');
 
 const mqttOptions = { clientId: 'NodeJS_Backend_' + Math.random().toString(16).slice(2, 8) };
 if (process.env.MQTT_USER && process.env.MQTT_PASS) {
@@ -25,13 +26,19 @@ client.on('message', async (topic, message) => {
         const payload = JSON.parse(message.toString());
 
         if (topic === 'tuan11ung/sensor_data') {
-            const newData = new DataSensor({
-                temperature: payload.temp,
-                humidity: payload.humi,
-                light: payload.lux
-            });
-            await newData.save();
-        } 
+            // 1. Tự động tìm (hoặc tạo mới nếu chưa có) 3 cảm biến trong bảng Sensor
+            const tempSensor = await Sensor.findOneAndUpdate({ name: 'Nhiệt độ' }, { sensor_type: 'DHT11' }, { upsert: true, returnDocument: 'after' });
+            const humiSensor = await Sensor.findOneAndUpdate({ name: 'Độ ẩm' }, { sensor_type: 'DHT11' }, { upsert: true, returnDocument: 'after' });
+            const luxSensor = await Sensor.findOneAndUpdate({ name: 'Ánh sáng' }, { sensor_type: 'LDR' }, { upsert: true, returnDocument: 'after' });
+
+            // 2. Lưu 3 bản ghi rời rạc vào bảng DATA_SENSOR
+            await DataSensor.insertMany([
+                { sensor_id: tempSensor._id, value: payload.temp },
+                { sensor_id: humiSensor._id, value: payload.humi },
+                { sensor_id: luxSensor._id, value: payload.lux }
+            ]);
+            
+        }
         else if (topic === 'tuan11ung/response') {
             const pendingAction = await ActionHistory.findOneAndUpdate(
                 { action: payload.command, status: "Pending" }, 

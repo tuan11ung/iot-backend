@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
 
 const dataSensorSchema = new mongoose.Schema({
-    // Đã gộp 3 chỉ số vào 1 dòng theo đúng ERD
-    temperature: { type: Number, required: true }, // °C
-    humidity: { type: Number, required: true },    // %
-    light: { type: Number, required: true },       // lux
+    // Nối với bảng Sensor bằng khóa ngoại (Foreign Key)
+    sensor_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Sensor', required: true },
+    value: { type: Number, required: true },
     timestamp: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Data_Sensor', dataSensorSchema);
+module.exports = mongoose.model('DataSensor', dataSensorSchema);
