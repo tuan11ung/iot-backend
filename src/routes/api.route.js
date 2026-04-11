@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { getSensorsData, getActionHistory, controlDevice } = require('../controllers/api.controller');
+
+// Gọi 3 file controller riêng biệt
+const { getSensorsData } = require('../controllers/sensor.controller');
+const { getActionHistory } = require('../controllers/history.controller');
+const { controlDevice } = require('../controllers/device.controller');
 
 /**
  * @swagger
@@ -17,7 +21,7 @@ const { getSensorsData, getActionHistory, controlDevice } = require('../controll
  *           description: Tên thiết bị cần điều khiển (VD FAN, AC, LIGHT)
  *         action:
  *           type: string
- *           description: Lệnh điều khiển (VD FAN_ON, LIGHT_OFF)
+ *           description: Lệnh điều khiển (VD ON, OFF, FAN_ON)
  *       example:
  *         device_id: FAN
  *         action: FAN_ON
@@ -26,13 +30,9 @@ const { getSensorsData, getActionHistory, controlDevice } = require('../controll
  *       properties:
  *         _id:
  *           type: string
- *         temperature:
- *           type: number
- *           format: float
- *         humidity:
- *           type: number
- *           format: float
- *         light:
+ *         sensor_name:
+ *           type: string
+ *         value:
  *           type: number
  *           format: float
  *         timestamp:
@@ -47,20 +47,13 @@ const { getSensorsData, getActionHistory, controlDevice } = require('../controll
  *           type: string
  *         action:
  *           type: string
+ *           enum: [ON, OFF]
  *         status:
  *           type: string
  *           enum: [Pending, Success, Failed, Timeout]
- *         old_state:
- *           type: string
- *         new_state:
- *           type: string
  *         requested_at:
  *           type: string
  *           format: date-time
- *         executed_at:
- *           type: string
- *           format: date-time
- *           nullable: true
  *     Pagination:
  *       type: object
  *       properties:
@@ -69,8 +62,6 @@ const { getSensorsData, getActionHistory, controlDevice } = require('../controll
  *         totalPages:
  *           type: integer
  *         totalRecords:
- *           type: integer
- *         itemsPerPage:
  *           type: integer
  *     SensorsDataResponse:
  *       type: object
@@ -89,28 +80,7 @@ const { getSensorsData, getActionHistory, controlDevice } = require('../controll
  *           items:
  *             $ref: '#/components/schemas/ActionHistory'
  *         pagination:
- *           type: object
- *           properties:
- *             currentPage:
- *               type: integer
- *             totalPages:
- *               type: integer
- *             totalRecords:
- *               type: integer
- *     ControlResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- *         data:
- *           $ref: '#/components/schemas/ActionHistory'
- *     ErrorResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- *       example:
- *         message: Loi server
+ *           $ref: '#/components/schemas/Pagination'
  */
 
 /**
@@ -134,64 +104,38 @@ const { getSensorsData, getActionHistory, controlDevice } = require('../controll
  *         default: 10
  *         description: Số bản ghi trên trang
  *       - in: query
+ *         name: sensorType
+ *         schema:
+ *           type: string
+ *           enum: [all, Temperature, Humidity, Light]
+ *         default: all
+ *         description: Lọc theo loại cảm biến
+ *       - in: query
+ *         name: searchBy
+ *         schema:
+ *           type: string
+ *           enum: [value, time]
+ *         default: value
+ *         description: Chế độ tìm kiếm (Giá trị hoặc Thời gian)
+ *       - in: query
  *         name: search
  *         schema:
  *           type: string
- *         description: Tìm kiếm toàn cục theo giá trị hoặc ID
+ *         description: Từ khóa tìm kiếm (VD 34.5 hoặc 04/04/2026 15:30)
  *       - in: query
  *         name: sortField
  *         schema:
  *           type: string
- *           enum: [id, temperature, humidity, light, time, timestamp]
+ *           enum: [id, sensor_name, value, timestamp]
  *         default: timestamp
- *         description: Trường sắp xếp
+ *         description: Trường cần sắp xếp
  *       - in: query
  *         name: sortDir
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *         default: desc
- *       - in: query
- *         name: filterType
- *         schema:
- *           type: string
- *           enum: [all, temperature, humidity, light]
- *         description: Loại cột cần lọc
- *       - in: query
- *         name: filterValue
- *         schema:
- *           type: string
- *         description: Giá trị lọc theo filterType
- *       - in: query
- *         name: fromDate
- *         schema:
- *           type: string
- *           example: 01/01/2026
- *         description: Ngày bắt đầu theo định dạng DD/MM/YYYY
- *       - in: query
- *         name: toDate
- *         schema:
- *           type: string
- *           example: 31/12/2026
- *         description: Ngày kết thúc theo định dạng DD/MM/YYYY
- *       - in: query
- *         name: hour
- *         schema:
- *           type: integer
- *           minimum: 0
- *           maximum: 23
- *       - in: query
- *         name: minute
- *         schema:
- *           type: integer
- *           minimum: 0
- *           maximum: 59
- *       - in: query
- *         name: second
- *         schema:
- *           type: integer
- *           minimum: 0
- *           maximum: 59
+ *         description: Chiều sắp xếp
  *     responses:
  *       200:
  *         description: Thành công
@@ -199,12 +143,6 @@ const { getSensorsData, getActionHistory, controlDevice } = require('../controll
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SensorsDataResponse'
- *       500:
- *         description: Lỗi server
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/sensors/data', getSensorsData);
 
@@ -227,14 +165,29 @@ router.get('/sensors/data', getSensorsData);
  *           type: integer
  *         default: 10
  *       - in: query
+ *         name: filterDevice
+ *         schema:
+ *           type: string
+ *           enum: [all, FAN, AC, LIGHT]
+ *         default: all
+ *         description: Lọc theo thiết bị cụ thể
+ *       - in: query
+ *         name: searchBy
+ *         schema:
+ *           type: string
+ *           enum: [info, time]
+ *         default: info
+ *         description: Chế độ tìm kiếm (Thông tin hoặc Thời gian)
+ *       - in: query
  *         name: search
  *         schema:
  *           type: string
+ *         description: Từ khóa tìm kiếm (ID, ON/OFF, Success...)
  *       - in: query
  *         name: sortField
  *         schema:
  *           type: string
- *           enum: [id, device, action, status, time, requested_at]
+ *           enum: [id, device_id, action, status, requested_at]
  *         default: requested_at
  *       - in: query
  *         name: sortDir
@@ -242,43 +195,6 @@ router.get('/sensors/data', getSensorsData);
  *           type: string
  *           enum: [asc, desc]
  *         default: desc
- *       - in: query
- *         name: filterType
- *         schema:
- *           type: string
- *           enum: [all, device, action, status]
- *       - in: query
- *         name: filterValue
- *         schema:
- *           type: string
- *       - in: query
- *         name: fromDate
- *         schema:
- *           type: string
- *           example: 01/01/2026
- *       - in: query
- *         name: toDate
- *         schema:
- *           type: string
- *           example: 31/12/2026
- *       - in: query
- *         name: hour
- *         schema:
- *           type: integer
- *           minimum: 0
- *           maximum: 23
- *       - in: query
- *         name: minute
- *         schema:
- *           type: integer
- *           minimum: 0
- *           maximum: 59
- *       - in: query
- *         name: second
- *         schema:
- *           type: integer
- *           minimum: 0
- *           maximum: 59
  *     responses:
  *       200:
  *         description: Thành công
@@ -286,12 +202,6 @@ router.get('/sensors/data', getSensorsData);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ActionHistoryResponse'
- *       500:
- *         description: Lỗi server
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/history', getActionHistory);
 
@@ -311,22 +221,10 @@ router.get('/history', getActionHistory);
  *     responses:
  *       200:
  *         description: Đã gửi lệnh (Pending) xuống mạch
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ControlResponse'
  *       400:
  *         description: Thiếu dữ liệu đầu vào
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Lỗi server nội bộ
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/control', controlDevice);
 
