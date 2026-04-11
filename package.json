@@ -22,8 +22,10 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "mongoose": "^9.3.1",
     "mqtt": "^5.15.0",
+    "pg": "^8.20.0",
+    "pg-harness": "^0.2.1",
+    "sequelize": "^6.37.8",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },

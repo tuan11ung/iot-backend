@@ -1,13 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const { join } = require('path');
 // 1. Import Swagger
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 
-const connectDB = require('./configs/db');
-require('./services/mqtt.service');
+const { sequelize, connectDB } = require('./configs/db');
 const apiRoutes = require('./routes/api.route');
 
 const app = express();
@@ -15,7 +14,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-connectDB();
+// Khởi chạy Database
+connectDB().then(async () => {
+    // Lệnh này sẽ tự động ép PostgreSQL tạo 4 bảng dựa theo Models bạn đã viết
+    await sequelize.sync({ alter: true });
+    console.log('✅ Đã đồng bộ hóa các bảng trong PostgreSQL!');
+
+    require('./services/mqtt.service');
+});
 
 // 2. CẤU HÌNH SWAGGER
 const swaggerOptions = {
@@ -37,7 +43,7 @@ const swaggerOptions = {
         ],
     },
     // Đường dẫn tới các file chứa comment mô tả API
-    apis: [path.join(__dirname, './routes/*.js')], 
+    apis: [join(__dirname, './routes/*.js')],
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);

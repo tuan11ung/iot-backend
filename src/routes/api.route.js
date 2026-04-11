@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const apiController = require('../controllers/api.controller');
+const { getSensorsData, getActionHistory, controlDevice } = require('../controllers/api.controller');
 
 /**
  * @swagger
@@ -206,7 +206,7 @@ const apiController = require('../controllers/api.controller');
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/sensors/data', apiController.getSensorsData);
+router.get('/sensors/data', getSensorsData);
 
 /**
  * @swagger
@@ -293,7 +293,7 @@ router.get('/sensors/data', apiController.getSensorsData);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/history', apiController.getActionHistory);
+router.get('/history', getActionHistory);
 
 /**
  * @swagger
@@ -328,6 +328,6 @@ router.get('/history', apiController.getActionHistory);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/control', apiController.controlDevice);
+router.post('/control', controlDevice);
 
 module.exports = router;

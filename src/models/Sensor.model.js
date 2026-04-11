@@ -1,9 +1,12 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../configs/db');
 
-const sensorSchema = new mongoose.Schema({
-    name: { type: String, required: true }, // "Nhiệt độ", "Độ ẩm", "Ánh sáng"
-    sensor_type: { type: String },          // "DHT22", "LDR", ...
-    is_active: { type: Boolean, default: true }
-}, { timestamps: { createdAt: 'created_at', updatedAt: false } });
+const Sensor = sequelize.define('Sensor', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING(100), allowNull: false },
+    sensor_type: { type: DataTypes.STRING(50) },
+    is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+    created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, { tableName: 'sensors', timestamps: false });
 
-module.exports = mongoose.model('Sensor', sensorSchema);
+module.exports = Sensor;

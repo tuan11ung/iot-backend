@@ -1,11 +1,12 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../configs/db');
 
-const deviceSchema = new mongoose.Schema({
-    // MongoDB tự có _id làm Primary Key
-    name: { type: String, required: true }, // VD: FAN / AC / LIGHT
-    type: { type: String, required: true }, // VD: Quạt / Điều hòa / Đèn
-    current_state: { type: String, default: 'OFF' }, // ON | OFF | BLINK | FADE
-    last_updated: { type: Date, default: Date.now }
-});
+const Device = sequelize.define('Device', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING(50), allowNull: false },
+    type: { type: DataTypes.STRING(50), allowNull: false },
+    current_state: { type: DataTypes.ENUM('ON', 'OFF', 'NULL'), defaultValue: 'NULL' },
+    last_updated: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, { tableName: 'devices', timestamps: false });
 
-module.exports = mongoose.model('Device', deviceSchema);
+module.exports = Device;
