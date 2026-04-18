@@ -9,7 +9,7 @@ const DataSensor = sequelize.define('DataSensor', {
         allowNull: false,
         references: { model: Sensor, key: 'id' }
     },
-    value: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    value: { type: DataTypes.DOUBLE, allowNull: false },
     timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { tableName: 'data_sensors', timestamps: false });
 

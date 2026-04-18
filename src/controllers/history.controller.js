@@ -4,12 +4,19 @@ const ActionHistory = require('../models/ActionHistory.model');
 
 exports.getActionHistory = async (req, res) => {
   try {
-    const { page = 1, limit = 10, sortField = 'requested_at', sortDir = 'desc', filterDevice, searchBy, search } = req.query;
+    const { page = 1, limit = 10, sortField = 'requested_at', sortDir = 'desc', filterDevice, filterAction, filterStatus, searchBy, search } = req.query;
 
     let whereCondition = {};
 
     if (filterDevice && filterDevice !== 'all') {
       whereCondition.device_id = filterDevice;
+    }
+
+    if (filterAction && filterAction !== 'all') {
+      whereCondition.action = filterAction;
+    }
+    if (filterStatus && filterStatus !== 'all') {
+      whereCondition.status = filterStatus;
     }
 
     if (search) {
