@@ -4,7 +4,7 @@ const router = express.Router();
 // Gọi 3 file controller riêng biệt
 const { getSensorsData } = require('../controllers/sensor.controller');
 const { getActionHistory } = require('../controllers/history.controller');
-const { controlDevice } = require('../controllers/device.controller');
+const { controlDevice, getDevicesStatus } = require('../controllers/device.controller');
 
 /**
  * @swagger
@@ -227,5 +227,37 @@ router.get('/history', getActionHistory);
  *         description: Lỗi server nội bộ
  */
 router.post('/control', controlDevice);
+
+/**
+ * @swagger
+ * /api/devices:
+ *   get:
+ *     summary: Lấy trạng thái hiện tại của tất cả thiết bị
+ *     tags:
+ *       - Device Status
+ *     responses:
+ *       200:
+ *         description: Thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       name:
+ *                         type: string
+ *                       current_state:
+ *                         type: string
+ *                       updated_at:
+ *                         type: string
+ *                         format: date-time
+ */
+router.get('/devices', getDevicesStatus);
 
 module.exports = router;

@@ -15,6 +15,23 @@ const mqttOptions = {
     clientId: 'NodeJS_Backend_' + Math.random().toString(16).slice(2, 8)
 };
 
+let lastSensorTime = 0;
+
+async function syncHardwareState() {
+    try {
+        const devices = await Device.findAll();
+        devices.forEach(device => {
+            if (device.current_state === 'ON') {
+                // Nếu DB lưu là ON, gửi lệnh ON xuống mạch để bật lại đèn
+                client.publish('tuan11ung/control', `${device.name}_ON`);
+                console.log(`📡 Đã gửi lệnh khôi phục trạng thái cho: ${device.name}_ON`);
+            }
+        });
+    } catch (err) {
+        console.error("Lỗi khi đồng bộ trạng thái mạch:", err);
+    }
+}
+
 // Nếu có tài khoản mật khẩu trong .env thì thêm vào
 if (process.env.MQTT_USER && process.env.MQTT_PASS) {
     mqttOptions.username = process.env.MQTT_USER;
@@ -49,6 +66,14 @@ client.on('message', async (topic, message) => {
         // A. LUỒNG 1: DỮ LIỆU CẢM BIẾN (Chạy mỗi 2 giây)
         // --------------------------------------------------
         if (topic === 'tuan11ung/sensor_data') {
+            const now = Date.now();
+
+            if (now - lastSensorTime > 5000) {
+                console.log('🔄 Phát hiện ESP32 vừa kết nối (hoặc khởi động lại). Đang đồng bộ trạng thái...');
+                syncHardwareState(); // Gọi hàm đồng bộ
+            }
+
+            lastSensorTime = now;
             // 1. Sequelize: Tìm cảm biến (nếu chưa có thì tự động tạo mới vào bảng Sensor)
             const [tempSensor] = await Sensor.findOrCreate({
                 where: { name: 'Nhiệt độ' },
@@ -76,10 +101,17 @@ client.on('message', async (topic, message) => {
         // VD ESP32 gửi lên: { "command": "FAN_ON", "status": "success" }
         // --------------------------------------------------
         else if (topic === 'tuan11ung/response') {
+            console.log("📥 Nhận được Response từ phần cứng: ", payload);
 
-            // 👉 SỬA LỖI ENUM Ở ĐÂY: Tách "FAN_ON" thành thiết bị "FAN" và lệnh "ON"
-            const actionEnum = payload.command.includes("ON") ? "ON" : "OFF";
-            const deviceName = payload.command.split('_')[0]; // Lấy chữ "FAN" ở trước dấu gạch dưới
+            if (!payload.command || !payload.status) {
+                console.warn('⚠️ Dữ liệu Response MQTT bị thiếu trường "command" hoặc "status". Vui lòng kiểm tra lại code C/C++ ESP32 của bạn!');
+                return;
+            }
+
+            // Ép kiểu tất cả về chữ IN HOA để chống lỗi ESP32 gửi 'fan_on' hay 'Fan_On'
+            const commandStr = String(payload.command).toUpperCase();
+            const actionEnum = commandStr.includes("ON") ? "ON" : "OFF";
+            const deviceName = commandStr.split('_')[0]; // "FAN"
 
             // 1. Tìm bản ghi "Pending" mới nhất (Tìm chuẩn theo device và actionEnum)
             const pendingAction = await ActionHistory.findOne({
@@ -93,7 +125,8 @@ client.on('message', async (topic, message) => {
 
             if (pendingAction) {
                 // 2. Cập nhật kết quả thành Success hoặc Failed
-                const isSuccess = payload.status === "success";
+                // Tương tự, ép kiểu status thành chữ thường để so chuẩn luôn với 'success'
+                const isSuccess = String(payload.status).trim().toLowerCase() === "success";
                 pendingAction.status = isSuccess ? "Success" : "Failed";
 
                 pendingAction.new_state = actionEnum; // Dùng luôn actionEnum cho gọn
@@ -101,7 +134,7 @@ client.on('message', async (topic, message) => {
 
                 await pendingAction.save(); // Lưu vào DB
 
-                console.log(`✅ Lệnh [${payload.command}] đã thực thi xong. Trạng thái: ${pendingAction.status}`);
+                console.log(`✅ Lệnh [${commandStr}] đã thực thi xong. Trạng thái: ${pendingAction.status}`);
 
                 // 3. Cập nhật trạng thái hiện tại (current_state) vào bảng Device
                 let device = await Device.findOne({ where: { name: pendingAction.device_id } });
@@ -118,6 +151,8 @@ client.on('message', async (topic, message) => {
                     device.last_updated = new Date();
                     await device.save();
                 }
+            } else {
+                console.log(`⚠️ Nhận được phản hồi cho lệnh [${commandStr}] nhưng không tìm thấy truy vấn nào đang chờ (Pending) trong CSDL`);
             }
         }
     } catch (error) {

@@ -45,3 +45,13 @@ exports.controlDevice = async (req, res) => {
     res.status(500).json({ message: "Lỗi server nội bộ" });
   }
 };
+
+exports.getDevicesStatus = async (req, res) => {
+  try {
+    const devices = await Device.findAll();
+    res.status(200).json({ data: devices });
+  } catch (error) {
+    console.error("Lỗi getDevicesStatus:", error);
+    res.status(500).json({ message: "Lỗi lấy trạng thái thiết bị" });
+  }
+};
