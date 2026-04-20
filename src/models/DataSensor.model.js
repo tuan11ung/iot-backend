@@ -13,7 +13,6 @@ const DataSensor = sequelize.define('DataSensor', {
     timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { tableName: 'data_sensors', timestamps: false });
 
-// Thiết lập mối quan hệ
 Sensor.hasMany(DataSensor, { foreignKey: 'sensor_id' });
 DataSensor.belongsTo(Sensor, { foreignKey: 'sensor_id' });
 

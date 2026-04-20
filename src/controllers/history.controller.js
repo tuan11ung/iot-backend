@@ -70,3 +70,27 @@ exports.getActionHistory = async (req, res) => {
     res.status(500).json({ message: "Lỗi Server Nội Bộ" });
   }
 };
+
+exports.getDeviceStatistics = async (req, res) => {
+  try {
+    // Nhóm theo Ngày (YYYY-MM-DD) và Device ID
+    const stats = await ActionHistory.findAll({
+      attributes: [
+        'device_id',
+        [sequelize.fn('to_char', sequelize.col('requested_at'), 'YYYY-MM-DD'), 'date'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'total']
+      ],
+      where: {
+        action: 'ON',
+        status: 'Success'
+      },
+      group: ['device_id', sequelize.fn('to_char', sequelize.col('requested_at'), 'YYYY-MM-DD')],
+      order: [[sequelize.fn('to_char', sequelize.col('requested_at'), 'YYYY-MM-DD'), 'ASC']]
+    });
+
+    res.status(200).json({ data: stats });
+  } catch (error) {
+    console.error("Lỗi getDeviceStatistics:", error);
+    res.status(500).json({ message: "Lỗi Server Nội Bộ" });
+  }
+};

@@ -129,10 +129,10 @@ client.on('message', async (topic, message) => {
                 const isSuccess = String(payload.status).trim().toLowerCase() === "success";
                 pendingAction.status = isSuccess ? "Success" : "Failed";
 
-                pendingAction.new_state = actionEnum; // Dùng luôn actionEnum cho gọn
+                pendingAction.new_state = actionEnum;
                 pendingAction.executed_at = new Date();
 
-                await pendingAction.save(); // Lưu vào DB
+                await pendingAction.save();
 
                 console.log(`✅ Lệnh [${commandStr}] đã thực thi xong. Trạng thái: ${pendingAction.status}`);
 
@@ -160,5 +160,4 @@ client.on('message', async (topic, message) => {
     }
 });
 
-// Xuất cái client này ra để bên Controller dùng nó Publish lệnh điều khiển (POST /api/control)
 module.exports = client;

@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Gọi 3 file controller riêng biệt
 const { getSensorsData } = require('../controllers/sensor.controller');
-const { getActionHistory } = require('../controllers/history.controller');
+const { getActionHistory, getDeviceStatistics } = require('../controllers/history.controller');
 const { controlDevice, getDevicesStatus } = require('../controllers/device.controller');
 
 /**
@@ -145,6 +145,19 @@ const { controlDevice, getDevicesStatus } = require('../controllers/device.contr
  *               $ref: '#/components/schemas/SensorsDataResponse'
  */
 router.get('/sensors/data', getSensorsData);
+
+/**
+ * @swagger
+ * /api/history/statistics:
+ *   get:
+ *     summary: Thống kê số lần bật thiết bị theo ngày
+ *     tags:
+ *       - Action History
+ *     responses:
+ *       200:
+ *         description: Thành công
+ */
+router.get('/history/statistics', getDeviceStatistics);
 
 /**
  * @swagger
