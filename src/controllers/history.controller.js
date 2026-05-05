@@ -77,14 +77,14 @@ exports.getDeviceStatistics = async (req, res) => {
     const stats = await ActionHistory.findAll({
       attributes: [
         'device_id',
+        'action',
         [sequelize.fn('to_char', sequelize.col('requested_at'), 'YYYY-MM-DD'), 'date'],
         [sequelize.fn('COUNT', sequelize.col('id')), 'total']
       ],
       where: {
-        action: 'ON',
         status: 'Success'
       },
-      group: ['device_id', sequelize.fn('to_char', sequelize.col('requested_at'), 'YYYY-MM-DD')],
+      group: ['device_id', 'action', sequelize.fn('to_char', sequelize.col('requested_at'), 'YYYY-MM-DD')],
       order: [[sequelize.fn('to_char', sequelize.col('requested_at'), 'YYYY-MM-DD'), 'ASC']]
     });
 
